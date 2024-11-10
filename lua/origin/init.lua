@@ -1,4 +1,5 @@
 local M = {}
+local noice = require("noice")
 
 function M.setup(opts)
    opts = opts or {}
@@ -14,14 +15,17 @@ function M.setup(opts)
    end
 
    if opts.custom_provider then
-      print("custom providers not supported yet" .. "defaulting to github")
+      noice.notify(
+         "custom providers not supported yet" .. "defaulting to github"
+      )
    end
 
    if opts.provider then
-      print("provider set:" .. opts.provider)
       selected_provider = opts.provider
    else
-      print("no provider set in opts{}. Falling back to github (default)")
+      noice.notify(
+         "no provider set in opts{}. Falling back to github (default)"
+      )
       selected_provider = "github"
    end
 
@@ -32,34 +36,53 @@ function M.setup(opts)
    elseif selected_provider == "bitbucket" then
       provider_base_url = "https://bitbucket.org"
    elseif selected_provider == "custom" then
-      print("custom providers not supported yet" .. "defaulting to github")
+      noice.notify(
+         "custom providers not supported yet" .. "defaulting to github"
+      )
       provider_base_url = "https://github.com"
    else
-      print("unknown provider:" .. selected_provider .. "defaulting to github")
+      noice.notify(
+         "unknown provider:" .. selected_provider .. "defaulting to github"
+      )
       provider_base_url = "https://github.com"
    end
 
    vim.keymap.set("n", "<Leader>gh", function()
       local repo_short_url =
-         vim.fn.input("Enter short_url of" .. selected_provider .. "repository")
+         vim.fn.input("short_url of " .. selected_provider .. " repository: ")
       local repo_name = repo_short_url:match("([^/]+)$")
-      local repo_url = provider_base_url .. "/" .. repo_short_url
-      local repo_install_url = repo_url .. "/archive/refs/heads/main.zip"
-      -- make sure tmp dir exists
+      local local_repo_path = tmp_dir .. "/" .. repo_name
+      -- make sure tmp_dir exists
       os.execute("mkdir -p " .. tmp_dir)
-      -- download repository as .zip
+      -- clone repository into tmp_dir
       os.execute(
-         "wget -O "
-            .. tmp_dir
+         "git clone"
+            .. " "
+            .. "-q"
+            .. " "
+            .. provider_base_url
             .. "/"
-            .. repo_name
-            .. ".zip "
-            .. repo_install_url
+            .. repo_short_url
+            .. " "
+            .. local_repo_path
       )
-      -- extract .zip
-      os.execute(
-         "unzip -o " .. tmp_dir .. "/" .. repo_name .. ".zip -d " .. tmp_dir
-      )
+      -- open new buffer inside the cloned repository
+      vim.cmd("edit " .. local_repo_path)
+
+      -- delete the cloned repository from tmp_dir when buffer is closed
+      vim.api.nvim_create_autocmd("BufWipeout", {
+         buffer = vim.api.nvim_get_current_buf(),
+         callback = function()
+            local delete_cmd = "rm -rf " .. local_repo_path
+            local delete_result = vim.fn.system(delete_cmd)
+            if vim.v.shell_error ~= 0 then
+               noice.notify(
+                  "Error deleting directory: " .. delete_result,
+                  "error"
+               )
+            end
+         end,
+      })
    end)
 end
 
