@@ -46,13 +46,20 @@ function M.setup(opts)
       local repo_url = provider_base_url .. "/" .. repo_short_url
       local repo_install_url = repo_url .. "/archive/refs/heads/main.zip"
       -- make sure tmp dir exists
-      os.execute("mkdir -p /tmp/onetmp")
+      os.execute("mkdir -p " .. tmp_dir)
       -- download repository as .zip
       os.execute(
-         "wget -O /tmp/onetmp/" .. repo_name .. ".zip " .. repo_install_url
+         "wget -O "
+            .. tmp_dir
+            .. "/"
+            .. repo_name
+            .. ".zip "
+            .. repo_install_url
       )
       -- extract .zip
-      os.execute("unzip -o " .. tmp_dir .. repo_name .. ".zip -d" .. tmp_dir)
+      os.execute(
+         "unzip -o " .. tmp_dir .. "/" .. repo_name .. ".zip -d " .. tmp_dir
+      )
    end)
 end
 
